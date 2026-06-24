@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GoalPath | Spatial Presentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&family=Space+Grotesk:wght@300;500;700&display=swap');
+
+    :root {
+      --bg-base: #121221;
+      --bg-surface: rgba(27, 27, 47, 0.75);
+      --bg-surface-solid: #1b1b2f;
+      --border-color: #30304b;
+      
+      --neon-primary: #9288f8;
+      --neon-sky: #5298ec;
+      --neon-coral: #ff8a80;
+      --neon-gold: #fbbf24;
+      
+      --text-main: #ffffff;
+      --text-dim: #a0a0bd;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #08080f;
+      color: var(--text-main);
+      overflow-x: hidden;
+      margin: 0; 
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .deck-container {
+      position: relative; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at top right, rgba(146, 136, 248, 0.15), var(--bg-base));
+      overflow-y: scroll; scroll-snap-type: y mandatory;
+    }
+    .deck-container::-webkit-scrollbar { display: none; }
+
+    .goal-path-line {
+      position: absolute; top: 0; bottom: 0; left: 100px; width: 2px;
+      background: linear-gradient(to bottom, transparent, var(--neon-primary), var(--neon-sky), var(--neon-gold), var(--neon-coral), transparent);
+      z-index: 1; filter: drop-shadow(0 0 8px var(--neon-primary));
+    }
+
+    .slide {
+      position: relative; width: 100%; height: 100%;
+      scroll-snap-align: start; padding: 4rem 4rem 4rem 180px;
+      display: flex; flex-direction: column; overflow: hidden;
+      z-index: 10;
+    }
+
+    .bg-text {
+      position: absolute; top: -5%; right: -5%;
+      font-size: 25rem; font-weight: 900;
+      color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.03);
+      line-height: 0.8; z-index: -1; pointer-events: none;
+    }
+
+    h1 { font-family: 'Space Grotesk', sans-serif; font-size: 6.5rem; font-weight: 700; line-height: 1; letter-spacing: -3px; }
+    h2 { font-size: 3.5rem; font-weight: 300; letter-spacing: -1px; margin-bottom: 2rem; color: #E2E8F0; }
+    h2 strong { font-weight: 900; color: var(--neon-primary); }
+    p.body-text { font-size: 1.2rem; color: var(--text-dim); line-height: 1.6; max-width: 600px; font-weight: 300; }
+
+    .spatial-card {
+      background: var(--bg-surface); backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 24px; padding: 2.5rem; transition: 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative; overflow: hidden;
+    }
+    .spatial-card::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at center, rgba(146, 136, 248, 0.1), transparent 50%);
+      opacity: 0; transition: 0.5s;
+    }
+    .spatial-card:hover { transform: translateY(-5px); border-color: var(--neon-primary); box-shadow: 0 10px 40px rgba(146, 136, 248, 0.1); }
+    .spatial-card:hover::before { opacity: 1; }
+
+    .path-node {
+      position: absolute; left: 88px; top: 50%; transform: translateY(-50%);
+      width: 26px; height: 26px; border-radius: 50%; background: var(--bg-base);
+      border: 2px solid var(--neon-primary); box-shadow: 0 0 20px rgba(146, 136, 248, 0.5);
+      display: flex; align-items: center; justify-content: center; z-index: 20;
+    }
+    .path-node::after { content: ''; width: 10px; height: 10px; background: var(--neon-primary); border-radius: 50%; }
+
+    .split { display: flex; gap: 4rem; height: 100%; align-items: center; }
+    .split > div { flex: 1; }
+    .masonry { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, auto); gap: 2rem; width: 100%; }
+    .m-large { grid-column: span 2; grid-row: span 2; }
+    .pill { display: inline-block; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; border: 1px solid; }
+    .c-primary { color: var(--neon-primary); border-color: var(--neon-primary); background: rgba(146, 136, 248, 0.1); }
+    .c-sky { color: var(--neon-sky); border-color: var(--neon-sky); background: rgba(82, 152, 236, 0.1); }
+    .c-coral { color: var(--neon-coral); border-color: var(--neon-coral); background: rgba(255, 138, 128, 0.1); }
+    .c-gold { color: var(--neon-gold); border-color: var(--neon-gold); background: rgba(251, 191, 36, 0.1); }
+
+    /* --- SLIDE 8: 3D App Mockup + Video Demo --- */
+    .perspective-container { perspective: 2000px; width: 100%; height: 500px; display: flex; justify-content: center; align-items: center; }
+    .mockup-3d {
+      width: 500px; height: 350px; background: #000; border-radius: 20px;
+      border: 2px solid var(--border-color); padding: 0.5rem;
+      transform: rotateX(10deg) rotateY(-20deg) translateZ(50px);
+      box-shadow: -30px 50px 80px rgba(0,0,0,0.8), 0 0 60px rgba(146, 136, 248, 0.3);
+      transform-style: preserve-3d; transition: 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mockup-3d:hover { transform: rotateX(2deg) rotateY(-5deg) translateZ(80px) scale(1.05); border-color: var(--neon-primary); box-shadow: 0 0 80px rgba(146, 136, 248, 0.5); }
+    
+    .video-placeholder {
+      width: 100%; height: 100%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="rgba(146, 136, 248, 0.05)" width="100" height="100"/><path d="M 0,0 L 100,100 M 100,0 L 0,100" stroke="rgba(146, 136, 248, 0.2)" stroke-width="1"/></svg>');
+      background-size: 50px 50px;
+      border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .play-btn {
+      width: 80px; height: 80px; background: rgba(146, 136, 248, 0.8); backdrop-filter: blur(10px);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 30px rgba(146, 136, 248, 0.6); cursor: pointer; transition: 0.3s;
+    }
+    .play-btn:hover { transform: scale(1.1); background: var(--neon-primary); }
+    .play-btn svg { width: 30px; height: 30px; fill: white; transform: translateX(3px); }
+
+    .video-label {
+      position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+      padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-family: monospace; border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* --- SLIDE 9: GitHub Contribution Grid (Bigger boxes) --- */
+    .contrib-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 12px; padding: 2.5rem;
+      background: var(--bg-surface); border-radius: 20px; border: 1px solid var(--border-color);
+      width: 100%; height: 350px;
+    }
+    .contrib-cell { background: #242438; border-radius: 8px; transition: 0.2s; position: relative; }
+    .contrib-cell.lvl-1 { background: rgba(146, 136, 248, 0.15); }
+    .contrib-cell.lvl-2 { background: rgba(146, 136, 248, 0.35); }
+    .contrib-cell.lvl-3 { background: rgba(146, 136, 248, 0.6); }
+    .contrib-cell.lvl-4 { background: var(--neon-primary); box-shadow: 0 0 10px rgba(146,136,248,0.5); }
+    
+    .tech-block {
+      background: var(--neon-sky); cursor: pointer;
+      display: flex; justify-content: center; align-items: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .tech-block svg { width: 28px; height: 28px; fill: white; }
+    .tech-block:hover { transform: scale(1.4); z-index: 10; box-shadow: 0 0 20px var(--neon-sky); border-radius: 12px; }
+    
+    .tech-block .tooltip {
+      visibility: hidden; opacity: 0; position: absolute;
+      bottom: 120%; left: 50%; transform: translateX(-50%);
+      background: var(--bg-surface-solid); color: white; border: 1px solid var(--neon-sky);
+      padding: 12px 18px; border-radius: 10px; font-size: 13px; width: max-content;
+      transition: 0.2s; pointer-events: none; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .tech-block:hover .tooltip { visibility: visible; opacity: 1; bottom: 140%; }
+
+    /* --- SLIDE 11: Dynamic Impact Viz --- */
+    .impact-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto; gap: 1.5rem; height: auto; margin-top: 1rem; }
+    .viz-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 24px; padding: 1.5rem; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+    .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-bottom: 2rem; }
+    .bar { flex: 1; background: var(--neon-primary); border-radius: 4px 4px 0 0; opacity: 0.3; transition: 0.5s; }
+    .viz-card:hover .bar { opacity: 0.8; }
+    .viz-card:hover .bar:nth-child(n+5) { background: var(--neon-coral); opacity: 1; }
+    .shield-viz { position: absolute; top: -20px; right: -20px; width: 200px; height: 200px; border-radius: 50%; border: 4px dashed var(--neon-gold); display: flex; justify-content: center; align-items: center; animation: spin 20s linear infinite; opacity: 0.2; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .compression-viz { position: absolute; top: 20px; right: 20px; width: 100px; height: 100px; }
+    .c-block { width: 40px; height: 40px; background: rgba(82, 152, 236, 0.2); position: absolute; border-radius: 8px; transition: 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .viz-card:hover .c-block { transform: scale(0.2); background: var(--neon-sky); opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container">
+    <div class="goal-path-line"></div>
+
+    <!-- SLIDE 1: Cover -->
+    <div class="slide" style="align-items: center; justify-content: center; text-align: center; padding: 0;">
+      <div class="path-node" style="display: none;"></div>
+      
+      <!-- Ambient Backlights -->
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 600px; height: 600px; background: radial-gradient(circle, rgba(146, 136, 248, 0.2), transparent 70%); z-index: 1;"></div>
+      
+      <div style="z-index: 10; display: flex; flex-direction: column; align-items: center;">
+        
+        <!-- Giant Prominent Logo -->
+        <div style="position: relative; margin-bottom: 2rem;">
+          <img src="../../goalpath.png" onerror="this.src='./goalpath.png';" alt="GoalPath Logo" style="width: 280px; height: 280px; object-fit: contain; filter: drop-shadow(0 0 40px rgba(146, 136, 248, 0.6));">
+        </div>
+
+        <div class="pill c-primary" style="margin-bottom: 1.5rem; background: rgba(146, 136, 248, 0.15); border: 1px solid var(--neon-primary); box-shadow: 0 0 15px rgba(146, 136, 248, 0.4);">AGENTIC HABIT TRACKING</div>
+        
+        <h1 style="color: var(--text-main); font-size: 6rem; margin-bottom: 1rem; text-shadow: 0 0 30px rgba(255,255,255,0.2);">GoalPath</h1>
+        
+        <p class="body-text" style="font-size: 1.4rem; max-width: 800px; line-height: 1.6;">
+          Menerjemahkan resolusi abstrak menjadi rutinitas kinetik melalui bimbingan AI secara real-time.
+        </p>
+
+        <div style="margin-top: 4rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+          <p style="font-weight: 700; letter-spacing: 3px; font-size: 0.9rem;">TIM PENGEMBANG GOALPATH</p>
+          <p style="color: var(--text-dim); font-size: 0.75rem; letter-spacing: 5px;">SYSTEM ARCHITECTURE 2026</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Problem -->
+    <div class="slide">
+      <div class="path-node" style="border-color: var(--neon-coral);"></div>
+      <div class="bg-text">02</div>
+      <div class="split">
+        <div>
+          <h2>The <strong style="color: var(--neon-coral);">92%</strong><br>Failure Rate.</h2>
+          <p class="body-text">
+            Kebanyakan aplikasi pelacak kebiasaan hanyalah buku catatan digital. Mereka pasif. Mereka membebani kognitif pengguna untuk mengisi form, tanpa memberikan bimbingan atau akuntabilitas harian.
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="spatial-card" style="border-left-color: var(--neon-coral);">
+            <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">Goal Paralysis</h3>
+            <p style="color: var(--text-dim); font-size: 0.9rem;">Target terlalu besar, memicu kelumpuhan aksi pada hari pertama.</p>
+          </div>
+          <div class="spatial-card" style="margin-left: 2rem;">
+            <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">Inkonsistensi Pasif</h3>
+            <p style="color: var(--text-dim); font-size: 0.9rem;">Hilangnya motivasi karena pelacakan manual terasa seperti tugas administratif.</p>
+          </div>
+          <div class="spatial-card" style="margin-left: 4rem;">
+            <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">Lack of Guidance</h3>
+            <p style="color: var(--text-dim); font-size: 0.9rem;">Mentor atau Coach manusia eksklusif dan tidak terjangkau bagi sebagian besar orang.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Validation -->
+    <div class="slide">
+      <div class="path-node" style="border-color: var(--neon-gold);"></div>
+      <div class="bg-text">03</div>
+      <div style="margin-bottom: 3rem;">
+        <div class="pill c-gold">ARCHITECTURAL AUDIT</div>
+        <h2 style="margin-top: 1rem;">Technical <strong>Bottlenecks</strong></h2>
+      </div>
+      <div style="display: flex; gap: 2rem; height: 100%;">
+        
+        <div class="spatial-card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 3rem; color: rgba(255,255,255,0.05); font-weight: 900;">/01</div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--neon-coral);">UTC Timezone Bug</h3>
+            <p class="body-text" style="font-size: 0.95rem;">Sinkronisasi server berbasis UTC menghancurkan streak pengguna di zona waktu lokal. Akurasi data harian rusak.</p>
+          </div>
+        </div>
+
+        <div class="spatial-card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 3rem; color: rgba(255,255,255,0.05); font-weight: 900;">/02</div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--neon-gold);">Query Waterfall</h3>
+            <p class="body-text" style="font-size: 0.95rem;">Penarikan data tanpa agregasi SQL (JOIN) dan limitasi baris menekan performa backend dan merusak UX grafik.</p>
+          </div>
+        </div>
+
+        <div class="spatial-card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="font-size: 3rem; color: rgba(255,255,255,0.05); font-weight: 900;">/03</div>
+            <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--neon-sky);">Unbounded LLM Context</h3>
+            <p class="body-text" style="font-size: 0.95rem;">Riwayat percakapan dikirim utuh tanpa filter. Membakar ratusan ribu token API, memicu latensi tinggi dan biaya cloud eksponensial.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Platform Intro -->
+    <div class="slide">
+      <div class="path-node" style="background: var(--neon-primary);"></div>
+      <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(146, 136, 248, 0.1), transparent 60%); z-index: -1;"></div>
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%;">
+        <h1 style="font-size: 8rem; letter-spacing: -5px; color: var(--text-main); text-shadow: 0 0 50px rgba(146, 136, 248, 0.5);">GoalPath.</h1>
+        <p style="font-size: 1.8rem; font-weight: 300; max-width: 800px; margin-top: 2rem; color: #E2E8F0; line-height: 1.5;">
+          Aplikasi tidak seharusnya diam. Kami menyuntikkan <strong style="color: var(--neon-primary);">Agen AI Interaktif</strong> yang mengamati pola Anda, memecah target, dan menjadi akuntabilitas harian personal.
+        </p>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Features -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">05</div>
+      <div class="pill c-primary" style="margin-bottom: 1rem;">ENGINE CAPABILITIES</div>
+      <h2>Core <strong>Innovations</strong></h2>
+      
+      <div class="masonry">
+        <div class="spatial-card m-large" style="display: flex; flex-direction: column; justify-content: space-between; border-color: var(--border-color);">
+          <div>
+            <h3 style="font-size: 2.5rem; line-height: 1.1; margin-bottom: 1rem; color: var(--text-main);">Conversational <br>Goal Wizard</h3>
+            <p class="body-text">Tinggalkan form panjang. Berdiskusi langsung dengan AI Coach melalui UI Bubbles untuk merumuskan target spesifik.</p>
+          </div>
+          <div style="height: 150px; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; padding: 1.5rem;">
+            <div style="background: var(--neon-primary); color: white; padding: 10px 20px; border-radius: 12px; font-size: 0.8rem; box-shadow: 0 10px 20px rgba(146, 136, 248, 0.3);">Selesaikan setup dalam 3 langkah →</div>
+          </div>
+        </div>
+        <div class="spatial-card">
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--neon-sky);">Persona Classifier</h3>
+          <p class="body-text" style="font-size: 0.9rem;">Sistem menganalisis pola konsistensi dan mengubah profil Anda (Rebel/Upholder) demi insight akurat.</p>
+        </div>
+        <div class="spatial-card">
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--neon-gold);">Smart Milestones</h3>
+          <p class="body-text" style="font-size: 0.9rem;">LLM membedah visi jangka panjang menjadi tonggak-tonggak mingguan secara otonom.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: User Flow -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">06</div>
+      <div class="pill c-sky" style="margin-bottom: 1rem;">THE FLOW</div>
+      <h2>Seamless <strong>Loop</strong></h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; height: 100%; position: relative;">
+        <svg style="position: absolute; top: 50%; left: 10%; width: 80%; height: 100px; transform: translateY(-50%); z-index: -1;" overflow="visible">
+          <path d="M0,50 Q200,-50 400,50 T800,50" fill="none" stroke="var(--border-color)" stroke-width="2" stroke-dasharray="10, 10"/>
+        </svg>
+        <div class="spatial-card" style="width: 22%; text-align: center; padding: 2rem 1rem;">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-primary); margin-bottom: 1rem;">01</div>
+          <h4 style="margin-bottom: 1rem;">Discuss</h4><p class="body-text" style="font-size: 0.85rem;">Input visi ke AI Coach melalui chat.</p>
+        </div>
+        <div class="spatial-card" style="width: 22%; text-align: center; padding: 2rem 1rem; transform: translateY(-30px);">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-sky); margin-bottom: 1rem;">02</div>
+          <h4 style="margin-bottom: 1rem;">Structure</h4><p class="body-text" style="font-size: 0.85rem;">Memecah goal jadi milestone.</p>
+        </div>
+        <div class="spatial-card" style="width: 22%; text-align: center; padding: 2rem 1rem; transform: translateY(30px);">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-gold); margin-bottom: 1rem;">03</div>
+          <h4 style="margin-bottom: 1rem;">Track</h4><p class="body-text" style="font-size: 0.85rem;">Ceklist aktivitas sesuai zona waktu.</p>
+        </div>
+        <div class="spatial-card" style="width: 22%; text-align: center; padding: 2rem 1rem;">
+          <div style="font-size: 2rem; font-weight: 900; color: var(--neon-coral); margin-bottom: 1rem;">04</div>
+          <h4 style="margin-bottom: 1rem;">Adapt</h4><p class="body-text" style="font-size: 0.85rem;">Persona engine update gaya bahasa coach.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Roadmap -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">07</div>
+      <div class="pill c-primary" style="margin-bottom: 1rem;">SPRINT EXECUTION</div>
+      <h2>Development <strong>Methodology</strong></h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 2rem; padding-left: 2rem; border-left: 2px solid var(--border-color);">
+        <div style="position: relative;">
+          <div style="position: absolute; left: -31px; top: 0; width: 14px; height: 14px; background: var(--neon-primary); border-radius: 50%; box-shadow: 0 0 10px var(--neon-primary);"></div>
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Hari 1-2: AI Core & Vector Prep</h3>
+          <p class="body-text">Setup Vercel AI SDK, koneksi Gemini, dan pembuatan Structured RAG snapshot.</p>
+        </div>
+        <div style="position: relative;">
+          <div style="position: absolute; left: -31px; top: 0; width: 14px; height: 14px; background: var(--neon-sky); border-radius: 50%; box-shadow: 0 0 10px var(--neon-sky);"></div>
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Hari 3-4: Interceptors & DB Sync</h3>
+          <p class="body-text">Modifikasi endpoint chat, tool calling database persistence, dan cron job.</p>
+        </div>
+        <div style="position: relative;">
+          <div style="position: absolute; left: -31px; top: 0; width: 14px; height: 14px; background: var(--neon-gold); border-radius: 50%; box-shadow: 0 0 10px var(--neon-gold);"></div>
+          <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Hari 5-6: UI/UX & Flow Wiring</h3>
+          <p class="body-text">Integrasi UI (Wizard Bubbles, milestone flowchart) dan timezone bebas bug.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: 3D App Mockup + Video Placeholder -->
+    <div class="slide">
+      <div class="path-node" style="box-shadow: 0 0 30px white; border-color: white;"></div>
+      <div class="bg-text">08</div>
+      <div class="split">
+        <div style="z-index: 50;">
+          <div class="pill c-sky" style="margin-bottom: 1rem;">LIVE PREVIEW</div>
+          <h2>App <strong>Demo</strong></h2>
+          <p class="body-text" style="margin-bottom: 2rem;">
+            Arahkan dan saksikan langsung bagaimana UI/UX Pro Max kami merender Wizard Chat dan Persona Insight dalam satu ruang terpadu.
+          </p>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem;">
+            <li style="display: flex; gap: 1rem; align-items: flex-start;">
+              <span style="color: var(--neon-primary);">✦</span>
+              <span class="body-text" style="font-size: 1rem;">Klik <strong>Play</strong> di sebelah kanan untuk memutar demonstrasi video integrasi AI Coach GoalPath.</span>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Big Video Placeholder -->
+        <div class="perspective-container">
+          <div class="mockup-3d">
+            <div class="video-placeholder">
+              <div class="play-btn">
+                <!-- Play Icon SVG -->
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <div class="video-label">GOALPATH_DEMO.MP4</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Architecture Contribution Graph -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">09</div>
+      <div class="pill c-primary" style="margin-bottom: 1rem;">TECH STACK</div>
+      <h2>Engine <strong>Architecture</strong></h2>
+      <p class="body-text" style="margin-bottom: 1rem;">Visualisasi jejak teknologi. Arahkan kursor pada modul sistem untuk deskripsi komponen.</p>
+      
+      <!-- Less boxes (12x4 = 48), bigger blocks -->
+      <div class="contrib-grid" id="contrib-grid">
+        <!-- Filled by script -->
+      </div>
+    </div>
+
+    <!-- SLIDE 10: File Structure -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">10</div>
+      <div class="split">
+        <div style="background: rgba(0,0,0,0.5); padding: 2rem; border-radius: 20px; font-family: monospace; font-size: 0.95rem; line-height: 1.8; color: var(--text-dim); border: 1px solid var(--border-color); box-shadow: inset 0 0 30px rgba(0,0,0,0.8);">
+          <span style="color: var(--neon-primary);">Goalpath/</span><br>
+          ├── <span style="color: white;">backend/</span><br>
+          │   ├── src/<br>
+          │   │   ├── routes.ts<br>
+          │   │   ├── services/ <span style="color: var(--neon-gold);">// Persona AI</span><br>
+          │   │   ├── repositories.ts<br>
+          │   │   └── schemas.ts<br>
+          │   └── supabase/ <span style="color: var(--neon-gold);">// Migrations</span><br>
+          ├── <span style="color: white;">frontend/</span><br>
+          │   ├── app/<br>
+          │   │   ├── coach/ <span style="color: var(--neon-sky);">// Wizard Bubbles</span><br>
+          │   │   └── progress/<br>
+          │   └── components/ <span style="color: var(--neon-sky);">// UI Glass</span><br>
+          └── <span style="color: white;">docs/</span>
+        </div>
+        <div>
+          <div class="pill c-sky" style="margin-bottom: 1rem;">ARCHITECTURE</div>
+          <h2>Clean & <strong>Modular</strong></h2>
+          <div class="spatial-card" style="margin-bottom: 1.5rem; padding: 1.5rem;">
+            <h4 style="color: white; margin-bottom: 0.5rem; font-size: 1.1rem;">Separation of Concerns</h4>
+            <p style="color: var(--text-dim); font-size: 0.85rem;">Logika backend dipisahkan ketat antara Controllers, Repos, dan Validasi.</p>
+          </div>
+          <div class="spatial-card" style="padding: 1.5rem;">
+            <h4 style="color: white; margin-bottom: 0.5rem; font-size: 1.1rem;">Supabase Declarative</h4>
+            <p style="color: var(--text-dim); font-size: 0.85rem;">Migrasi database diatur secara runut menggunakan skrip SQL.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: Unique Impact Visualization -->
+    <div class="slide">
+      <div class="path-node"></div>
+      <div class="bg-text">11</div>
+      <div class="pill c-gold" style="margin-bottom: 1rem;">METRICS</div>
+      <h2>Business <strong>Impact</strong></h2>
+      
+      <div class="impact-grid" style="margin-top: 2rem;">
+        
+        <!-- Metric 1: Retention -->
+        <div class="viz-card">
+          <h3 style="font-size: 3rem; font-weight: 800; color: var(--neon-coral); line-height: 1;">+40%</h3>
+          <p style="font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">Habit Retention</p>
+          <p style="font-size: 0.85rem; color: var(--text-dim);">Peningkatan motivasi karena AI menyesuaikan nada bahasa.</p>
+          
+          <div class="bar-chart" style="margin-top: 1.5rem; margin-bottom: 0;">
+            <div class="bar" style="height: 20%;"></div><div class="bar" style="height: 30%;"></div>
+            <div class="bar" style="height: 45%;"></div><div class="bar" style="height: 60%;"></div>
+            <div class="bar" style="height: 80%;"></div><div class="bar" style="height: 100%;"></div>
+          </div>
+        </div>
+
+        <!-- Metric 2: Streak -->
+        <div class="viz-card">
+          <div class="shield-viz"></div>
+          <h3 style="font-size: 3rem; font-weight: 800; color: var(--neon-gold); line-height: 1; z-index: 2;">100%</h3>
+          <p style="font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0; z-index: 2;">Streak Accuracy</p>
+          <p style="font-size: 0.85rem; color: var(--text-dim); z-index: 2;">Resolusi timezone tuntas. Akurasi data 100% berdasarkan waktu lokal.</p>
+        </div>
+
+        <!-- Metric 3: Token -->
+        <div class="viz-card" style="grid-column: span 2; flex-direction: row; align-items: center; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 3.5rem; font-weight: 800; color: var(--neon-sky); line-height: 1;">-60%</h3>
+            <p style="font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">API Token Expense</p>
+            <p style="font-size: 0.85rem; color: var(--text-dim); max-width: 300px;">Sliding Window 10 percakapan & kompresi RAG menekan overhead LLM.</p>
+          </div>
+          <div class="compression-viz">
+            <div class="c-block" style="top: 0; left: 0;"></div><div class="c-block" style="top: 0; right: 0; transition-delay: 0.1s;"></div>
+            <div class="c-block" style="bottom: 0; left: 0; transition-delay: 0.2s;"></div><div class="c-block" style="bottom: 0; right: 0; transition-delay: 0.3s;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Close -->
+    <div class="slide">
+      <div class="path-node" style="box-shadow: none; border-color: transparent; background: transparent;"></div>
+      <div class="bg-text">12</div>
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%;">
+        <div style="width: 100px; height: 1px; background: white; margin-bottom: 2rem;"></div>
+        <h1 style="font-size: 5rem; letter-spacing: -2px; color: white;">Terima Kasih.</h1>
+        <p style="font-size: 1.2rem; font-weight: 300; max-width: 600px; margin-top: 1rem; color: var(--text-dim); line-height: 1.6;">
+          Mewujudkan setiap target besar melalui konsistensi langkah kecil harian yang diarahkan secara presisi.
+        </p>
+        
+        <div style="margin-top: 4rem; padding: 1.5rem 3rem; border: 1px solid var(--border-color); border-radius: 50px; background: rgba(255,255,255,0.02); backdrop-filter: blur(10px); transition: 0.3s; cursor: pointer;" onmouseover="this.style.borderColor='var(--neon-primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+          <p style="font-size: 0.7rem; letter-spacing: 3px; color: var(--neon-primary); margin-bottom: 0.5rem; text-transform: uppercase;">Repository Source Code</p>
+          <p style="font-size: 1.5rem; font-weight: 700; color: white; font-family: monospace;">github.com/Goalpath/Goalpath</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // GitHub Contribution Graph Logic - Slide 9
+    const grid = document.getElementById('contrib-grid');
+    const cols = 12;
+    const rows = 4;
+    const totalCells = cols * rows; // 48 cells
+    
+    // Tech Stack mapped to specific cell indices
+    // SVG paths used for clean minimalist icons
+    const stackMapping = {
+      6: { 
+        name: "Next.js", desc: "React App Router & SSR Framework",
+        icon: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.18 14.54l-5.63-7.51v7.51H8.8V7.54h1.75l5.63 7.51V7.54h1.75v8.99h-1.75z"/></svg>'
+      },
+      14: { 
+        name: "Zod", desc: "TypeScript-first schema validation",
+        icon: '<svg viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13.5h-13L12 6.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>'
+      },
+      21: { 
+        name: "Tailwind", desc: "Utility-first CSS framework",
+        icon: '<svg viewBox="0 0 24 24"><path d="M12 4.5C8 4.5 5.5 7.5 4 12c1.5-1.5 3.5-2 5.5-1.5 1.5.4 2.5 1.4 4 2.5 1.5 1.1 3 2.5 6.5 2.5 4 0 6.5-3 8-7.5-1.5 1.5-3.5 2-5.5 1.5-1.5-.4-2.5-1.4-4-2.5C17 5.9 15.5 4.5 12 4.5z"/></svg>'
+      },
+      29: { 
+        name: "Node.js", desc: "Backend runtime API",
+        icon: '<svg viewBox="0 0 24 24"><path d="M11.9 2L2 7.7v8.6L11.9 22l9.9-5.7V7.7L11.9 2zm0 2.3l8 4.6-8 4.6-8-4.6 8-4.6zm-8 6.5l8 4.6v9l-8-4.6v-9zm9.9 13.6v-9l8-4.6v9l-8 4.6z"/></svg>'
+      },
+      34: { 
+        name: "Supabase", desc: "PostgreSQL Database & Auth",
+        icon: '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>'
+      },
+      42: { 
+        name: "Gemini", desc: "AI Inference & Logic",
+        icon: '<svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2z"/></svg>'
+      }
+    };
+
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement('div');
+      cell.classList.add('contrib-cell');
+      
+      // Randomly assign background fill levels for visual noise
+      if (Math.random() > 0.5) {
+        const lvl = Math.floor(Math.random() * 3) + 1;
+        cell.classList.add(`lvl-${lvl}`);
+      }
+
+      // If it's a designated tech block
+      if (stackMapping[i]) {
+        cell.className = 'contrib-cell tech-block';
+        cell.innerHTML = `
+          ${stackMapping[i].icon}
+          <div class="tooltip">
+            <strong>${stackMapping[i].name}</strong><br>
+            <span style="color:#a0a0bd;font-weight:normal;">${stackMapping[i].desc}</span>
+          </div>`;
+      }
+      
+      grid.appendChild(cell);
+    }
+  </script>
+</body>
+</html>
